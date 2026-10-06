@@ -1,0 +1,39 @@
+{
+  "name": "email-editor",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "node build",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "kit": "node scripts/build-kit.mjs",
+    "vendor": "node scripts/fetch-vendor.mjs",
+    "extract": "node scripts/extract.mjs"
+  },
+  "dependencies": {
+    "font-awesome": "^4.7.0",
+    "grapesjs": "^0.23.6",
+    "grapesjs-mjml": "^1.0.8",
+    "mjml-browser": "^4.18.0"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-node": "^5.5.7",
+    "@sveltejs/kit": "^2.70.3",
+    "@sveltejs/vite-plugin-svelte": "^6.2.4",
+    "@types/node": "^22.0.0",
+    "mjml": "^4.18.0",
+    "mjml-parser-xml": "^4.18.0",
+    "svelte": "^5.57.1",
+    "svelte-check": "^4.7.6",
+    "typescript": "^5.9.3",
+    "vite": "^7.3.7"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ]
+  }
+}

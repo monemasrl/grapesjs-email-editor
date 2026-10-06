@@ -1,0 +1,54 @@
+{
+  "generatedAt": "2026-10-06T07:14:26.969Z",
+  "categories": [
+    "Header",
+    "Hero",
+    "Testo",
+    "Testo + immagine",
+    "Immagine",
+    "Colonne",
+    "Prodotti",
+    "CTA",
+    "Social",
+    "Separatori",
+    "Footer"
+  ],
+  "sources": [
+    {
+      "id": "mjmlio",
+      "label": "MJML official",
+      "repo": "mjmlio/email-templates",
+      "sha": "a7230b13086c1746524839768fe0bc15a897d960",
+      "license": "Nessun file LICENSE nel repository",
+      "templates": 25,
+      "blocks": 180
+    },
+    {
+      "id": "mailteorite",
+      "label": "Mailteorite",
+      "repo": "Mailteorite/mjml-email-templates",
+      "sha": "79d0e3a132c9fc901444d183801dc9a3c77da94e",
+      "license": "MIT",
+      "templates": 14,
+      "blocks": 79
+    },
+    {
+      "id": "easyemail",
+      "label": "Easy Email Pro",
+      "repo": "Easy-Email-Pro/email-templates",
+      "sha": "7b4b97ad8d7e42835a1ab68371a925e57c7d38e2",
+      "license": "MIT (dichiarata nel README)",
+      "templates": 50,
+      "blocks": 364
+    },
+    {
+      "id": "ecommerce",
+      "label": "E-commerce (bbulakh)",
+      "repo": "bbulakh/ecommerce-email",
+      "sha": "6f0a8636623c347ef9387f21876506cc82d0cb82",
+      "license": "MIT",
+      "templates": 5,
+      "blocks": 24
+    }
+  ]
+}
