@@ -1,5 +1,5 @@
 // Genera il kit di blocchi e i template d'esempio per ogni tema → static/data/kit.json
-// Uso: npm run kit
+// Uso: pnpm kit
 import { writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import mjml2html from 'mjml';

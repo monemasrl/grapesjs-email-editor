@@ -1,6 +1,6 @@
 // Temi del kit. Ogni blocco usa SOLO questi token, così cambiando tema cambia tutto in modo coerente.
 //
-// Per aggiungere un tema: copia uno degli oggetti, cambia id/label/valori e rilancia `npm run kit`.
+// Per aggiungere un tema: copia uno degli oggetti, cambia id/label/valori e rilancia `pnpm kit`.
 // Regola: dentro un tema i colori devono essere tutti diversi tra loro e i due font devono essere
 // stringhe diverse; serve al "Cambia stile" nell'editor, che converte un token nell'altro.
 

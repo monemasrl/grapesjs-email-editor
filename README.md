@@ -1,16 +1,40 @@
-# Email Editor — branch `sveltekit`
+# GrapesJS Email Editor
 
-Stessa applicazione del branch `inspector` (kit di blocchi, 3 stili, inspector per elemento, barra testo, libreria immagini) riscritta in **SvelteKit 2 + Svelte 5 + TypeScript**, con un **backend vero**: email e immagini sono salvate su disco dal server SvelteKit (adapter-node). GrapesJS + grapesjs-mjml restano il motore dell'editor.
+Editor di email drag & drop basato su **GrapesJS + MJML**, con un kit di blocchi dallo stile coerente e un backend per salvare email e immagini.
+
+**Stack:** SvelteKit 2, Svelte 5, TypeScript, adapter-node, GrapesJS 0.23 + grapesjs-mjml, mjml-browser.
+
+## Funzionalità
+
+- **Galleria**: template d'esempio filtrabili per stile, email vuota, elenco delle email salvate (apri, elimina).
+- **Editor** con interfaccia propria:
+  - a sinistra **Blocchi** (anteprime dal vivo, ricerca, categorie) e **Livelli**;
+  - a destra l'**Inspector**, con controlli specifici per ogni tipo di elemento (sezione, colonna, testo, bottone, immagine, divisore, spazio, social, menu, hero, link): palette dello stile corrente, spaziature sui 4 lati, allineamenti, font, bordi, immagini dalla libreria, percorso di selezione e azioni (sposta, duplica, elimina);
+  - **barra di formattazione del testo**: grassetto, corsivo, sottolineato, barrato, link, colore, elenchi, allineamento, rimuovi formattazione;
+  - **libreria immagini** con upload (trascina o scegli), aggiunta da URL e ricerca;
+  - anteprima desktop/tablet/mobile, annulla/ripeti, codice MJML/HTML, download dell'HTML compilato.
+- **Stili**: Pulito, Editoriale, Vivace. Il menu *Stile* nell'editor riapplica un altro stile all'email aperta mantenendo i testi.
+- **Salvataggio** su disco tramite API: email in JSON, immagini nella cartella `uploads`.
 
 ## Avvio
 
+Requisiti: Node.js 20 o superiore, pnpm.
+
 ```bash
 pnpm install
-pnpm dev                 # http://localhost:5173
-pnpm check               # controllo tipi (svelte-check)
+pnpm dev          # http://localhost:5173
 ```
 
-Produzione:
+| Comando | Cosa fa |
+|-|-|
+| `pnpm dev` | server di sviluppo |
+| `pnpm check` | controllo dei tipi (svelte-check) |
+| `pnpm build` | build di produzione in `build/` |
+| `pnpm start` | avvia la build (`node build`) |
+| `pnpm kit` | rigenera il kit di blocchi e template in `static/data/kit.json` |
+| `pnpm vendor` / `pnpm extract` | scarica le raccolte MJML open source ed estrae template e blocchi (vedi sotto) |
+
+## Produzione
 
 ```bash
 pnpm build
@@ -19,68 +43,60 @@ ORIGIN=https://editor.example.com DATA_DIR=/var/lib/email-editor PORT=3000 node 
 
 | Variabile | Uso |
 |-|-|
-| `ORIGIN` | **obbligatoria in produzione**: URL pubblico del sito. Senza, SvelteKit rifiuta i POST (protezione CSRF) e salvataggi/upload falliscono |
+| `ORIGIN` | **obbligatoria in produzione**: URL pubblico del sito. Senza, SvelteKit rifiuta le richieste POST (protezione CSRF) e salvataggi e upload falliscono |
 | `DATA_DIR` | cartella dei dati (predefinita `./data`, esclusa da git) |
 | `PUBLIC_BASE_URL` | opzionale: base degli URL delle immagini caricate, se diversa da `ORIGIN` (es. un CDN) |
-| `PORT`, `HOST` | porta e indirizzo di ascolto di adapter-node |
+| `PORT`, `HOST` | porta e indirizzo di ascolto (adapter-node) |
+
+Dietro un reverse proxy vanno impostati anche `PROTOCOL_HEADER` / `HOST_HEADER` di adapter-node, oppure solo `ORIGIN`.
 
 ## Struttura
 
 ```
 src/
   routes/
-    +page.svelte / +page.server.ts      galleria (template + email salvate)
-    edit/[id]/                          nuova email da template (/edit/blank:<stile> = vuota)
+    +page.svelte, +page.server.ts       galleria
+    edit/[id]/                          nuova email da template (/edit/blank:<stile> = email vuota)
     email/[id]/                         email salvata
-    api/emails/ · api/emails/[id]/      GET lista · POST crea · GET/PUT/DELETE singola (JSON)
-    api/assets/ · api/assets/[name]/    GET lista · POST upload multipart (campo "file") · DELETE
-    uploads/[file]/                     serve le immagini caricate
+    api/emails/, api/emails/[id]/       API email
+    api/assets/, api/assets/[name]/     API immagini
+    uploads/[file]/                     immagini caricate
   lib/
-    server/catalog.ts                   kit/template/blocchi letti da static/data/*.json
-    server/storage.ts                   archivio su disco (sostituibile con DB + S3)
+    components/                         Preview, Icon, Toast
     components/editor/                  EditorPage, BlocksPanel, Inspector, AssetLibrary, controls/*
-    editor/                             schema dell'inspector, barra testo, icone, CSS
+    editor/                             schema dell'inspector, barra testo, icone, inserimento blocchi, CSS
+    server/catalog.ts                   template, blocchi e stili letti da static/data
+    server/storage.ts                   archivio su disco
     themes.ts                           cambio stile, email vuota, segnaposto
+    config.ts                           raccolte caricate e stile predefinito
 static/data/                            kit.json (+ raccolte estratte)
-scripts/                                build-kit.mjs, extract.mjs (scrivono in static/data)
+scripts/                                generazione del kit ed estrazione delle raccolte
+reports/                                report dell'ultima estrazione
 ```
 
-Note:
+L'editor gira solo nel browser (`ssr = false` sulle pagine `/edit` e `/email`); la galleria è renderizzata dal server.
 
-- L'editor gira solo nel browser (`ssr = false` sulle pagine `/edit` e `/email`); la galleria è renderizzata dal server.
-- Salvataggio: il primo "Salva" crea l'email (POST) e aggiorna l'URL a `/email/<id>` senza ricaricare; i successivi fanno PUT. `⌘/Ctrl+S` salva. Uscendo con modifiche non salvate viene chiesta conferma.
-- Upload immagini: solo PNG, JPG, GIF, WebP fino a 5 MB, verificati anche dai primi byte del file; SVG escluso per sicurezza. Gli URL salvati nell'email sono assoluti (servono ai client di posta).
-- Versioni scelte: SvelteKit 2.70 (la 3.0 è uscita pochi giorni fa: l'aggiornamento si può fare a parte), Vite 7, TypeScript 5.9.
+## API
 
----
+| Metodo e percorso | Descrizione |
+|-|-|
+| `GET /api/emails` | elenco delle email salvate |
+| `POST /api/emails` | crea un'email: `{ name, mjml, fromTemplate?, theme? }` |
+| `GET /api/emails/:id` | singola email |
+| `PUT /api/emails/:id` | aggiorna un'email |
+| `DELETE /api/emails/:id` | elimina un'email |
+| `GET /api/assets` | elenco delle immagini caricate |
+| `POST /api/assets` | upload multipart, campo `file` (anche più file) |
+| `DELETE /api/assets/:name` | elimina un'immagine |
+| `GET /uploads/:file` | serve un'immagine caricata |
 
-# Branch `inspector`
+- Upload: solo PNG, JPG, GIF e WebP fino a 5 MB, verificati anche dai primi byte del file. SVG escluso: servito dallo stesso dominio potrebbe eseguire script.
+- Gli URL delle immagini salvati nell'email sono assoluti, perché devono funzionare nei client di posta.
+- `src/lib/server/storage.ts` scrive su file JSON con scritture atomiche: va bene per un'istanza singola. Per più istanze o più carico si sostituisce con un database e uno storage tipo S3 mantenendo le stesse funzioni.
 
-Parte da `kit` e rifà l'interfaccia dell'editor in stile "studio", restando su **GrapesJS open source** (nessuna licenza, nessuna dipendenza nuova):
+## Kit di blocchi e stili
 
-- **Layout**: barra in alto (nome, dispositivi, stile, annulla/ripeti, contorni, anteprima, codice, scarica, salva) · a sinistra **Blocchi | Livelli** · al centro il canvas · a destra l'**Inspector**.
-- **Inspector per tipo di elemento** (`src/editor/schema.js`): Email, Sezione, Gruppo di sezioni, Colonna, Testo, Bottone, Immagine, Divisore, Spazio, Social, Icona social, Menu, Voce di menu, Hero, Link. Controlli dedicati (`src/editor/controls.js`): colori con la palette dello stile corrente, spaziature su 4 lati collegabili, allineamenti a icone, font dello stile, bordo (spessore/stile/colore), numeri con unità, interruttori, immagine dalla libreria. Percorso di selezione cliccabile e azioni (contenitore, su/giù, duplica, elimina). Tutto passa dall'undo/redo.
-- **Barra testo** (`src/editor/rte.js`): grassetto, corsivo, sottolineato, barrato, link (con "nuova scheda"), rimuovi link, colore (palette dello stile + libero), elenchi puntati/numerati, allineamento del blocco, rimuovi formattazione.
-- **Libreria immagini** (`src/editor/assets.js`): trascina file o scegli, aggiungi da URL, cerca, rimuovi; mostra anche le immagini già nell'email e segnaposto nei colori dello stile. **Caricamento simulato**: i file diventano data URL nel localStorage (max 1,5 MB); in produzione va sostituito con un upload al server che restituisce l'URL pubblico.
-- **Livelli**: Layer Manager di GrapesJS con radice sul corpo dell'email e nomi in italiano, ristilizzato.
-
-Per aggiungere controlli a un tipo di elemento basta aggiungere una riga in `schema.js` (`{ type, attr, label, … }`).
-
----
-
-# Branch `kit`
-
-In questo branch l'app mostra **solo il kit di blocchi generato** (`scripts/build-kit.mjs`) e i suoi template d'esempio, con stile unico e **3 stili selezionabili**: Pulito, Editoriale, Vivace.
-
-```bash
-npm install
-pnpm kit        # rigenera public/data/kit.json (già incluso)
-npm run dev        # http://localhost:5173
-```
-
-## Il kit
-
-46 blocchi per stile (138 in totale), tutti validati con MJML in modalità `strict`:
+Il kit è generato da `scripts/build-kit.mjs` (`pnpm kit`): 46 blocchi per stile, tutti validati con MJML in modalità `strict`, più 5 template d'esempio (Newsletter, Promozione, Lancio prodotto, Conferma ordine, Benvenuto).
 
 | Categoria | Blocchi |
 |-|-|
@@ -98,95 +114,47 @@ npm run dev        # http://localhost:5173
 | Separatori (3) | Linea · Spazio · Linea corta d'accento |
 | Footer (4) | Semplice · Con social · Scuro · A colonne |
 
-Template d'esempio (per ogni stile): Newsletter, Promozione, Lancio prodotto, Conferma ordine, Benvenuto.
+File principali:
 
-## Stili
+- `scripts/kit/themes.mjs`: gli stili (12 colori, font titoli/testo, web font, raggio di bottoni e riquadri);
+- `scripts/kit/helpers.mjs`: mattoncini MJML (testo, bottone, immagine…) che usano solo i valori dello stile;
+- `scripts/kit/blocks.mjs`: il catalogo dei blocchi;
+- `scripts/kit/templates.mjs`: i template d'esempio, come elenco di blocchi.
 
-- **Galleria**: scegli lo stile con i chip in alto; anche l'"Email vuota" parte nello stile scelto.
-- **Editor**: il menu **Stile** nella barra in alto ri-applica un altro stile all'email aperta **mantenendo i testi**: converte colori, font, raggi degli angoli, colori dei segnaposto e web font. Il pannello blocchi mostra i blocchi dello stile corrente.
-- Il cambio stile funziona su tutto ciò che usa i token del tema; un colore scelto a mano nello Style Manager che non appartiene al tema resta com'è.
+**Aggiungere uno stile**: copia un tema in `themes.mjs`, cambia id, nome e valori, poi lancia `pnpm kit`. Dentro un tema i colori devono essere tutti diversi tra loro e i due font devono essere stringhe diverse: è quello che permette al cambio stile di convertire un valore nell'altro (lo script lo controlla).
 
-### Aggiungere o modificare uno stile
+**Cambio stile**: converte nell'MJML colori, font, raggi degli angoli, colori dei segnaposto e web font del tema di partenza in quelli del tema scelto. Un colore scelto a mano che non appartiene allo stile resta com'è.
 
-Tutto è in `scripts/kit/themes.mjs`: colori (12 token), font titoli/testo, web font, raggio bottoni e riquadri. Copia un tema, cambia i valori e lancia `pnpm kit`. Lo script controlla che dentro un tema i colori siano tutti diversi (serve al cambio stile).
+Le immagini del kit sono segnaposto di placehold.co nei colori dello stile.
 
-- `scripts/kit/helpers.mjs` — mattoncini MJML (testo, bottone, immagine, ecc.) che leggono solo i token
-- `scripts/kit/blocks.mjs` — il catalogo dei blocchi
-- `scripts/kit/templates.mjs` — i template d'esempio come elenco di blocchi
-- `src/themes.js` — cambio stile lato browser
-- `src/config.js` — quali raccolte caricare (`['kit']` in questo branch; aggiungi `'mjmlio'`, `'mailteorite'`, `'easyemail'`, `'ecommerce'` per rivedere anche le raccolte estratte, dopo `npm run extract`)
+## Inspector
 
-Le immagini sono segnaposto di placehold.co nei colori dello stile; le email salvate in questo branch usano una chiave di localStorage separata da `master`.
+Cosa mostra l'inspector per ogni tipo di elemento è definito in `src/lib/editor/schema.ts`: per aggiungere un controllo basta una riga, ad esempio `{ type: 'color', attr: 'background-color', label: 'Sfondo' }`.
 
----
+Tipi di controllo disponibili (`src/lib/components/editor/controls/`): `text`, `number`, `select`, `segmented`, `toggle`, `color`, `spacing`, `border`, `font`, `image`.
 
-# Email Editor (prototipo) — raccolte estratte
+## Raccolte MJML open source (opzionale)
 
-Editor di email basato su **GrapesJS + grapesjs-mjml**, con template e blocchi estratti da quattro raccolte open source di template MJML.
-
-- **Galleria**: scegli un template (filtrabile per raccolta e ricercabile) oppure parti da un'email vuota.
-- **Editor**: GrapesJS con preset MJML; pannello blocchi a sinistra filtrabile per raccolta, categoria, testo e "solo da questo template". Trascina un blocco nel canvas o cliccalo per inserirlo dopo la sezione selezionata.
-- **Salvataggio finto**: le email vanno nel `localStorage` del browser (`src/store.js`); compaiono in galleria sotto "Le mie email". `Cmd/Ctrl+S` salva.
-- **Scarica HTML**: esporta l'HTML compilato da MJML.
-
-## Avvio
+Oltre al kit, l'app può caricare template e blocchi estratti da quattro raccolte open source:
 
 ```bash
-npm install
-npm run dev        # http://localhost:5173
+pnpm vendor     # scarica i repository in vendor/ (commit fissati in scripts/sources.mjs)
+pnpm extract    # genera static/data/<raccolta>.json e reports/<raccolta>.md
 ```
 
-I dati estratti sono già in `public/data/`, quindi non serve altro per partire.
+Poi si attivano in `src/lib/config.ts`:
 
-## Rigenerare template e blocchi
-
-```bash
-npm run vendor     # scarica i 4 repository in vendor/ (commit fissati in scripts/sources.mjs)
-npm run extract    # rigenera public/data/*.json e reports/*.md
+```ts
+export const SOURCES = ['kit', 'mjmlio', 'mailteorite', 'easyemail', 'ecommerce'];
 ```
 
-`vendor/` è trattato come dati: non viene eseguito nulla al suo interno.
+L'estrazione applica gli `mj-attributes` direttamente sugli elementi (ogni sezione deve funzionare da sola nell'editor), rimuove gli attributi non validi, converte i componenti non supportati da grapesjs-mjml (`mj-table`, `mj-accordion`, `mj-carousel`), valida ogni blocco con MJML ed elimina i duplicati.
 
-### Cosa fa l'estrazione (`scripts/extract.mjs`)
+| Raccolta | Licenza |
+|-|-|
+| [mjmlio/email-templates](https://github.com/mjmlio/email-templates) | nessun file LICENSE nel repository: da verificare prima dell'uso in un prodotto |
+| [Mailteorite/mjml-email-templates](https://github.com/Mailteorite/mjml-email-templates) | MIT |
+| [Easy-Email-Pro/email-templates](https://github.com/Easy-Email-Pro/email-templates) | MIT (dichiarata nel README) |
+| [bbulakh/ecommerce-email](https://github.com/bbulakh/ecommerce-email) | MIT |
 
-1. Parsing di ogni `.mjml` con il parser XML di MJML.
-2. `<mj-attributes>` (`mj-all`, default per tag, `mj-class`) applicati **inline** su ogni elemento: in GrapesJS ogni sezione viene compilata da sola, quindi deve essere autosufficiente. Solo gli attributi validi per il componente vengono copiati.
-3. Attributi non validi (che MJML già ignorava) rimossi; `background-color="none"` → `transparent`.
-4. Componenti che grapesjs-mjml 1.x non supporta convertiti: `mj-table` → `mj-text` con tabella HTML, `mj-accordion` → `mj-text`, `mj-carousel` → prima immagine. Elementi messi direttamente in `mj-body` (es. `mj-spacer`) avvolti in section/column.
-5. In `mj-head` restano solo `mj-font` e `mj-style` (`mj-title`/`mj-preview` verrebbero mostrati come testo nel canvas).
-6. Ogni `mj-section` / `mj-wrapper` di primo livello diventa un blocco, validato con MJML in modalità `strict`; duplicati strutturali (stessa struttura e stili, testi/URL diversi) scartati.
-7. Categoria assegnata con euristiche (Header, Hero, Testo, Testo + immagine, Immagine, Colonne, Prodotti, CTA, Social, Separatori, Footer); la regola usata è nel tooltip del blocco.
-8. Quando un blocco viene inserito, i suoi `mj-font`/`mj-style` d'origine vengono aggiunti a `mj-head` se mancano.
-
-Il riepilogo per ogni raccolta è in `reports/<raccolta>.md`.
-
-## Raccolte
-
-| Raccolta | Template | Blocchi | Licenza |
-|-|-|-|-|
-| [mjmlio/email-templates](https://github.com/mjmlio/email-templates) | 25 | 180 | nessun file LICENSE nel repo |
-| [Mailteorite/mjml-email-templates](https://github.com/Mailteorite/mjml-email-templates) | 14 | 79 | MIT |
-| [Easy-Email-Pro/email-templates](https://github.com/Easy-Email-Pro/email-templates) | 50 | 364 | MIT (dichiarata nel README) |
-| [bbulakh/ecommerce-email](https://github.com/bbulakh/ecommerce-email) | 5 | 24 | MIT |
-
-Il repository ufficiale MJML non dichiara una licenza: prima di usare quei template in un prodotto conviene verificarlo.
-
-## Struttura
-
-```
-scripts/        fetch-vendor.mjs, extract.mjs, sources.mjs
-public/data/    index.json + un JSON per raccolta (template e blocchi)
-reports/        report di estrazione
-src/
-  main.js       router (#/, #/edit/<id>, #/email/<id>)
-  gallery.js    galleria template ed email salvate
-  editor.js     GrapesJS + pannello blocchi personalizzato (blockManager.custom)
-  preview.js    anteprime: MJML compilato nel browser, iframe scalati e caricati in modo lazy
-  store.js      salvataggio finto (localStorage) — da sostituire con la tua API
-```
-
-## Note
-
-- Le anteprime sono renderizzate dal vivo nel browser con `mjml-browser`, quindi non ci sono thumbnail da rigenerare.
-- In sviluppo l'istanza dell'editor è disponibile in console come `window.__editor`.
-- Un template Mailteorite (`upsell/01-order-bump-discount`) contiene `mj-section` annidate in `mj-column` già nell'originale: si apre, ma MJML segnala avvisi in esportazione.
+`vendor/` è trattato come dati: lo script non esegue nulla al suo interno.
